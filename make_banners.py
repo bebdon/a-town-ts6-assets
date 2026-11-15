@@ -215,7 +215,7 @@ BANNERS = [
     ("minecraft", "Minecraft", "beanzone1.g.akliz.net", "blocks", (120, 190, 80)),
     ("lol", "League of Legends", "Ranked, normals and ARAM.", "crown", (220, 180, 80)),
     ("ping", "Ping To Play", "Poke a Mod when you're ready.", "signal", (60, 210, 170)),
-    ("music", "Music / Chill", "Tunes on. Feet up.", "music", (255, 100, 160)),
+    ("music", "Music & Chill", "Tunes on. Feet up. Type !help", "music", (255, 100, 160)),
     ("private", "Private Rooms", "Make your own room in here.", "door", (90, 200, 230)),
     ("staff", "Staff Room", "Moderators and up only.", "shield", (230, 80, 80)),
     ("afk", "AFK", "Back in a bit.", "moon", (140, 150, 220)),
