@@ -236,7 +236,8 @@ def render(name, title, subtitle, kind, accent, seed):
     bbox = layer.getbbox()
     if bbox:
         m = layer.crop(bbox)
-        scale = min(0.62, (96 * SS) / m.height)
+        # fit inside the ~40px strip the channel tree shows
+        scale = min(0.62, (34 * SS) / m.height, (90 * SS) / m.width)
         m = m.resize((max(1, int(m.width * scale)), max(1, int(m.height * scale))), Image.LANCZOS)
         cx, cy = int(W * SS * 0.83), int(118 * SS)
         img.alpha_composite(m, (cx - m.width // 2, cy - m.height // 2))
@@ -246,7 +247,71 @@ def render(name, title, subtitle, kind, accent, seed):
     img.save(OUT / f"{name}.png", optimize=True)
 
 
+def extra_motif(img, kind, accent):
+    """Motifs used only for group icons."""
+    d = ImageDraw.Draw(img)
+    A = accent + (255,)
+    L = (240, 240, 250, 255)
+    cx, cy, u = int(W * SS * 0.5), int(H * SS * 0.5), SS
+    if kind == "star":
+        pts = []
+        for i in range(10):
+            r = (56 if i % 2 == 0 else 24) * u
+            a = math.pi / 2 + i * math.pi / 5
+            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
+        d.polygon(pts, fill=A)
+    elif kind == "hammer":
+        d.rounded_rectangle([cx - 8 * u, cy - 20 * u, cx + 8 * u, cy + 60 * u], 5 * u, fill=L)
+        d.rounded_rectangle([cx - 46 * u, cy - 52 * u, cx + 46 * u, cy - 14 * u], 8 * u, fill=A)
+    elif kind == "person":
+        d.ellipse([cx - 22 * u, cy - 58 * u, cx + 22 * u, cy - 14 * u], fill=A)
+        d.pieslice([cx - 48 * u, cy - 6 * u, cx + 48 * u, cy + 90 * u], 180, 360, fill=A)
+    elif kind == "shieldstar":
+        pts = [(cx, cy - 58 * u), (cx + 50 * u, cy - 40 * u), (cx + 44 * u, cy + 20 * u), (cx, cy + 58 * u), (cx - 44 * u, cy + 20 * u), (cx - 50 * u, cy - 40 * u)]
+        d.polygon(pts, fill=A)
+        sp = []
+        for i in range(10):
+            r = (24 if i % 2 == 0 else 10) * u
+            a = math.pi / 2 + i * math.pi / 5
+            sp.append((cx + r * math.cos(a), cy - 4 * u - r * math.sin(a)))
+        d.polygon(sp, fill=L)
+
+
+ICON_DIR = Path(__file__).parent / "icons" / "png"
+
+CHANNEL_ICONS = [  # file, motif, accent
+    ("ch_lobby", "train", (232, 170, 66)), ("ch_games", "controller", (96, 170, 255)),
+    ("ch_cs", "crosshair", (240, 150, 60)), ("ch_wow", "swords", (170, 110, 255)),
+    ("ch_minecraft", "blocks", (120, 190, 80)), ("ch_lol", "crown", (220, 180, 80)),
+    ("ch_ping", "signal", (60, 210, 170)), ("ch_music", "music", (255, 100, 160)),
+    ("ch_private", "door", (90, 200, 230)), ("ch_staff", "shield", (230, 80, 80)),
+    ("ch_afk", "moon", (140, 150, 220)), ("ch_discord", "bubble", (110, 120, 240)),
+]
+GROUP_ICONS = [
+    ("grp_owner", "crown", (232, 170, 66)), ("grp_admin", "shieldstar", (230, 80, 80)),
+    ("grp_mod", "hammer", (96, 170, 255)), ("grp_member", "star", (120, 190, 80)),
+    ("grp_guest", "person", (160, 172, 200)),
+]
+
+
+def icon(name, kind, accent, size=64):
+    layer = Image.new("RGBA", (W * SS, H * SS), (0, 0, 0, 0))
+    if kind in ("star", "hammer", "person", "shieldstar"):
+        extra_motif(layer, kind, accent)
+    else:
+        motif(layer, kind, accent)
+    m = layer.crop(layer.getbbox())
+    side = max(m.size)
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.alpha_composite(m, ((side - m.width) // 2, (side - m.height) // 2))
+    ICON_DIR.mkdir(parents=True, exist_ok=True)
+    sq.resize((size, size), Image.LANCZOS).save(ICON_DIR / f"{name}.png", optimize=True)
+
+
 if __name__ == "__main__":
     for i, b in enumerate(BANNERS):
         render(*b, seed=i + 7)
     print("wrote", len(BANNERS), "banners to", OUT)
+    for spec in CHANNEL_ICONS + GROUP_ICONS:
+        icon(*spec)
+    print("wrote", len(CHANNEL_ICONS) + len(GROUP_ICONS), "icons to", ICON_DIR)
