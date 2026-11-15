@@ -86,6 +86,10 @@ def render(name, title, subtitle, kind, accent, seed):
     out = mb.OUT / f"{name}.gif"
     q[0].save(out, save_all=True, append_images=q[1:], duration=MS, loop=0, optimize=True, disposal=1)
     print("wrote", out, out.stat().st_size // 1024, "KB")
+    # APNG: clients that can't animate it just show frame 1 like a normal PNG
+    apng = mb.OUT / f"{name}_anim.png"
+    frames[0].save(apng, save_all=True, append_images=frames[1:], duration=MS, loop=0, optimize=True)
+    print("wrote", apng, apng.stat().st_size // 1024, "KB")
 
 
 if __name__ == "__main__":
