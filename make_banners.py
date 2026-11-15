@@ -237,9 +237,10 @@ def render(name, title, subtitle, kind, accent, seed):
     if bbox:
         m = layer.crop(bbox)
         # fit inside the ~40px strip the channel tree shows
-        scale = min(0.62, (34 * SS) / m.height, (90 * SS) / m.width)
+        # the TS6 channel tree shows roughly y=105..137 of the 236px image
+        scale = min(0.62, (24 * SS) / m.height, (70 * SS) / m.width)
         m = m.resize((max(1, int(m.width * scale)), max(1, int(m.height * scale))), Image.LANCZOS)
-        cx, cy = int(W * SS * 0.83), int(118 * SS)
+        cx, cy = int(W * SS * 0.83), int(121 * SS)
         img.alpha_composite(m, (cx - m.width // 2, cy - m.height // 2))
     text(img, title, subtitle, accent)
     img = img.resize((W, H), Image.LANCZOS).convert("RGB")
@@ -294,7 +295,7 @@ GROUP_ICONS = [
 ]
 
 
-def icon(name, kind, accent, size=64):
+def icon(name, kind, accent, size=64, tile=False):
     layer = Image.new("RGBA", (W * SS, H * SS), (0, 0, 0, 0))
     if kind in ("star", "hammer", "person", "shieldstar"):
         extra_motif(layer, kind, accent)
@@ -302,8 +303,18 @@ def icon(name, kind, accent, size=64):
         motif(layer, kind, accent)
     m = layer.crop(layer.getbbox())
     side = max(m.size)
-    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-    sq.alpha_composite(m, ((side - m.width) // 2, (side - m.height) // 2))
+    if tile:
+        # solid rounded tile so TS6's default channel cube can't show through
+        pad = int(side * 0.22)
+        T = side + 2 * pad
+        sq = Image.new("RGBA", (T, T), (0, 0, 0, 0))
+        d = ImageDraw.Draw(sq)
+        dark = tuple(int(c * 0.28 + n * 0.72) for c, n in zip(accent, NAVY_BOT))
+        d.rounded_rectangle([0, 0, T - 1, T - 1], int(T * 0.22), fill=dark + (255,), outline=accent + (255,), width=max(2, T // 28))
+        sq.alpha_composite(m, ((T - m.width) // 2, (T - m.height) // 2))
+    else:
+        sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        sq.alpha_composite(m, ((side - m.width) // 2, (side - m.height) // 2))
     ICON_DIR.mkdir(parents=True, exist_ok=True)
     sq.resize((size, size), Image.LANCZOS).save(ICON_DIR / f"{name}.png", optimize=True)
 
@@ -312,6 +323,8 @@ if __name__ == "__main__":
     for i, b in enumerate(BANNERS):
         render(*b, seed=i + 7)
     print("wrote", len(BANNERS), "banners to", OUT)
-    for spec in CHANNEL_ICONS + GROUP_ICONS:
+    for spec in CHANNEL_ICONS:
+        icon(*spec, tile=True)
+    for spec in GROUP_ICONS:
         icon(*spec)
     print("wrote", len(CHANNEL_ICONS) + len(GROUP_ICONS), "icons to", ICON_DIR)
