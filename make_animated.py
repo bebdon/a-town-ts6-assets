@@ -95,7 +95,7 @@ def signal_fill(t, accent, m):
     """Bars light up one by one, then reset."""
     layer = blank()
     d = ImageDraw.Draw(layer)
-    lit = int(t * 6) if t > 0 else 4
+    lit = (4 + int(t * 6)) % 6  # starts at 4 lit like the still, wraps without a jump
     for i in range(5):
         h = (5 + i * 4.5) * SS
         x = CX - 26 * SS + i * 11 * SS
@@ -166,6 +166,20 @@ MOVES = {
 }
 
 
+def full_frames(frames):
+    """Force every APNG frame to cover the whole canvas.
+
+    Pillow crops each frame to the area that changed and relies on the player to paste it
+    over the previous one. TS6's player gets that wrong (flicker/flash), so nudge the two
+    corner pixels by 1 on alternate frames: the change box is then always the full image.
+    """
+    for i, f in enumerate(frames):
+        if i % 2:
+            for xy in ((0, 0), (W - 1, H - 1)):
+                r, g, b = f.getpixel(xy)
+                f.putpixel(xy, (r ^ 1, g, b))
+
+
 def render(name, title, subtitle, kind, accent, seed):
     still = base(title, subtitle, accent, seed)
     m = static_motif(kind, accent)
@@ -177,8 +191,11 @@ def render(name, title, subtitle, kind, accent, seed):
         img.alpha_composite(stars(t, seed))
         img.alpha_composite(MOVES[kind](t, accent, m))
         frames.append(img.resize((W, H), Image.LANCZOS).convert("RGB"))
+    full_frames(frames)
     out = mb.OUT / f"{name}_anim.png"
-    frames[0].save(out, save_all=True, append_images=frames[1:], duration=MS, loop=0, optimize=True)
+    # disposal/blend 0 = keep canvas, replace pixels; with full frames each one stands alone
+    frames[0].save(out, save_all=True, append_images=frames[1:], duration=MS, loop=0,
+                   disposal=0, blend=0, optimize=True)
     print("wrote", out.name, out.stat().st_size // 1024, "KB")
 
 
